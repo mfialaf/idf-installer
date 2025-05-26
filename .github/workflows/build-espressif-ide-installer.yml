@@ -9,6 +9,16 @@ on:
       espressif_ide_version:
         required: true
         type: string
+  workflow_dispatch:
+    inputs:
+      esp_idf_version:
+        description: 'ESP-IDF version (e.g. 5.1.1)'
+        required: true
+        type: string
+      espressif_ide_version:
+        description: 'Espressif IDE version (e.g. 2.9.0)'
+        required: true
+        type: string
 
 jobs:
   build-espressif-ide-installer:
@@ -47,46 +57,9 @@ jobs:
           CERTIFICATE_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
         shell: pwsh
         working-directory: "P:"
-        run: .\Build-Installer.ps1 -InstallerType espressif-ide -OfflineBranch "v${{ inputs.esp_idf_version }}" -EspressifIdeVersion "${{ inputs.espressif_ide_version }}"
-      
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: espressif-ide-${{ inputs.espressif_ide_version }}-with-esp-idf-${{ inputs.esp_idf_version }}
-          release_name: Release of Espressif IDE ${{ inputs.espressif_ide_version }} with ESP-IDF ${{ inputs.esp_idf_version }}
-          draft: false
-          prerelease: false
+        run: .\Build-Installer.ps1 -InstallerType espressif-ide -OfflineBranch "v${{ github.event.inputs.esp_idf_version }}" -EspressifIdeVersion "${{ github.event.inputs.espressif_ide_version }}"
 
       - name: Get installer size and store it to file
         run: |
-          echo $(Get-ItemProperty -Path .\build\espressif-ide-setup-espressif-ide-with-esp-idf-${{ inputs.esp_idf_version }}-signed.exe | Select-Object -ExpandProperty Length) > variables.txt
-          echo "Instaler size from variable is $(Get-Content variables.txt)"
-          
-      - name: Upload artifacts of installer size
-        uses: actions/upload-artifact@v4
-        with:
-          name: installer-size
-          path: ./variables.txt
-
-      - name: Upload Release Asset To Github
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: .\build\espressif-ide-setup-espressif-ide-with-esp-idf-${{ inputs.esp_idf_version }}-signed.exe
-          asset_name: esp-idf-tools-setup-espressif-ide-${{ inputs.espressif_ide_version }}-with-esp-idf-${{ inputs.esp_idf_version }}.exe
-          asset_content_type: application/octet-stream
-
-      - name: Upload Release Asset To dl.espressif.com
-        id: upload-release-asset-espressif
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
-        shell: pwsh
-        run: aws s3 cp --acl=public-read --no-progress .\build\espressif-ide-setup-espressif-ide-with-esp-idf-${{ inputs.esp_idf_version }}-signed.exe s3://${{ secrets.DL_BUCKET }}/dl/idf-installer/esp-idf-tools-setup-espressif-ide-${{ inputs.espressif_ide_version }}-with-esp-idf-${{ inputs.esp_idf_version }}.exe
+          echo $(Get-ItemProperty -Path .\build\espressif-ide-setup-espressif-ide-with-esp-idf-${{ github.event.inputs.esp_idf_version }}.exe | Select-Object -ExpandProperty Length) > variables.txt
+          echo "Installer size from variable is $(Get-Content variables.txt)"
